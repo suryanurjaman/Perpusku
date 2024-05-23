@@ -1,26 +1,57 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, Button, Modal, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import AdminHeader from '../../../components/Headers/AdminHeader';
 import SearchInputComponent from '../../../components/TextInput/SearchInputComponent';
 import UserCardComponent from '../../../components/UserCard/UserCardComponent';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { fetchUsers } from '../../../redux/actions/UserAction';
+import auth from '@react-native-firebase/auth';
 
-const Label = ({ text, isFocused }) => (
-    <View style={[styles.labelContainer, isFocused && styles.labelContainerFocused]}>
-        <Text style={[styles.label, isFocused && styles.labelFocused]}>{text}</Text>
-    </View>
-);
-
-const AddUserPage = ({ onSubmit, navigation }) => {
+const AddUserPage = ({ navigation }) => {
+    const dispatch = useDispatch()
+    const [refreshing, setRefreshing] = React.useState(false);
+    const user = auth().currentUser;
+    const users = useSelector(state => state.user.users);
+    console.log('Data terupdate :', users)
 
     const onIcon1Press = () => {
         navigation.navigate('AddUser')
     }
 
+    const onRefresh = useCallback(() => {
+        console.log('Pull to refresh triggered');
+        setRefreshing(true);
+        if (user) {
+            const userId = user.uid;
+            dispatch(fetchUsers(userId))
+                .then(() => {
+                    console.log('Data fetched successfully');
+                })
+                .catch((error) => {
+                    console.error('Error fetching data:', error);
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        setRefreshing(false);
+                    }, 1000);
+                });
+        } else {
+            setRefreshing(false);
+        }
+    }, [dispatch, user]);
+
+    useEffect(() => {
+        if (user) {
+            const userId = user.uid;
+            dispatch(fetchUsers(userId))
+        }
+        console.log('Data terupdate :', users)
+    }, [dispatch])
+
     return (
         <ScrollView
             style={styles.container}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
             <AdminHeader
                 tittle='Data User'
@@ -31,6 +62,7 @@ const AddUserPage = ({ onSubmit, navigation }) => {
             <SearchInputComponent />
             <Text style={styles.textTitle}>User</Text>
             <UserCardComponent
+                refreshing={refreshing}
             />
         </ScrollView>
     );

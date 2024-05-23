@@ -11,8 +11,6 @@ import ThreeDotComponent from '../ThreeDot/ThreeDotComponent';
 const ModalComponent = ({ dataValue, modalVisible, hideModal, title, isProfile, isBook }) => {
     const dispatch = useDispatch();
 
-    console.log('userdata: ', dataValue)
-
     const setLogout = () => {
         dispatch(Logout());
     };

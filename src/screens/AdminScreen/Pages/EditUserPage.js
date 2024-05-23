@@ -35,15 +35,6 @@ const EditUserPage = ({ route }) => {
         }
     }, [selectedCategory, editedDataValue.role]);
 
-
-    const handleItemChange = (value) => {
-        setSelectedCategory(value);
-    };
-
-    const handleUpdateItems = (newItems) => {
-        setDropdownItems(newItems);
-    };
-
     const openCameraPicker = () => {
         const options = {
             mediaType: 'photo',
@@ -76,12 +67,12 @@ const EditUserPage = ({ route }) => {
     };
 
     // Fungsi untuk menyimpan perubahan
-    const handleSaveChanges = () => {
+    const handleSaveChanges = async () => {
         try {
             // Lakukan validasi atau manipulasi data jika diperlukan
             console.log(editedDataValue)
             // Panggil fungsi updateUser dengan data yang diperbarui
-            dispatch(updateUser(editedDataValue, selectedImage, dataValue.imageUrl));
+            await dispatch(updateUser(editedDataValue, selectedImage, dataValue.imageUrl));
 
             // Tampilkan pesan sukses atau navigasi ke halaman lain jika diperlukan
             console.log('data berhasil di perbaharui')

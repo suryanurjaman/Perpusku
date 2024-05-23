@@ -2,7 +2,7 @@
 const initialState = {
     role: null,
     isAuthenticated: false,
-    userData: null
+    userData: null,
 };
 
 const AuthReducer = (state = initialState, action) => {
@@ -13,23 +13,22 @@ const AuthReducer = (state = initialState, action) => {
                 ...state,
                 role: action.payload.role,
                 isAuthenticated: true,
-                userData: action.payload.userData
+                userData: action.payload.userData,
             };
         case 'LOGOUT':
             return {
                 ...state,
                 role: null,
                 isAuthenticated: false,
-                userData: null
+                userData: null,
             };
         case 'EDIT_PROFILE':
             return {
                 ...state,
-                userData: {
-                    ...state.userData,
-                    ...action.payload,
-                },
+                userData: action.payload.updatedUserData
             };
+        case 'DELETE_USER':
+            return initialState
         default:
             return state;
     }

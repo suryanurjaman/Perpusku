@@ -2,7 +2,7 @@ import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import React, { useState } from 'react';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const PasswordField = ({ value, onChangeText }) => {
+const PasswordField = ({ value, onChangeText, stylesTextInput }) => {
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
     const togglePasswordVisibility = () => {
@@ -10,9 +10,9 @@ const PasswordField = ({ value, onChangeText }) => {
     };
 
     return (
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, stylesTextInput]}>
             <TextInput
-                style={styles.input}
+                style={[styles.input]}
                 placeholder="Password"
                 secureTextEntry={!isPasswordVisible}
                 value={value}

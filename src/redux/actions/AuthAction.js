@@ -5,21 +5,40 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
 
-export const Init = () => {
-    return async dispatch => {
+export const Init = (userId) => {
+    return async (dispatch) => {
+        let unsubscribe;
         try {
-            const role = await AsyncStorage.getItem('role');
-            const userDataString = await AsyncStorage.getItem('userData'); // Tambahkan ini
-            const userData = JSON.parse(userDataString); // Tambahkan ini
-            if (role !== null && userData !== null) { // Periksa jika role dan userData tidak null
-                dispatch({
-                    type: 'LOGIN',
-                    payload: {
-                        role: role,
-                        userData: userData
-                    },
-                });
+            if (!userId) {
+                console.error('User ID is required to initialize');
+                return;
             }
+            // Langganan perubahan pada dokumen pengguna di Firestore
+            unsubscribe = firestore().collection('users').doc(userId)
+                .onSnapshot((snapshot) => {
+                    if (snapshot) {
+                        const userData = snapshot.data();
+                        dispatch({
+                            type: 'LOGIN',
+                            payload: {
+                                userData: {
+                                    ...userData,
+                                    userId: userId // Menyertakan userId ke dalam userData
+                                }
+                            },
+                        });
+                    } else {
+                        console.log("User document does not exist");
+                        // Lakukan tindakan yang sesuai jika dokumen pengguna tidak ada
+                    }
+                });
+
+            // Ingat untuk membatalkan langganan saat komponen unmount atau saat log out
+            return () => {
+                if (unsubscribe) {
+                    unsubscribe();
+                }
+            };
         } catch (error) {
             console.error('Error initializing app: ', error);
         }
@@ -33,26 +52,30 @@ export const Login = (email, password) => {
             const { user } = response;
             const userRef = firestore().collection('users').doc(user.uid);
 
-            // Langganan perubahan pada dokumen pengguna di Firestore
-            userRef.onSnapshot((doc) => {
-                if (doc) {
-                    const userData = doc.data();
-                    AsyncStorage.setItem('role', userData.role);
-                    AsyncStorage.setItem('userData', JSON.stringify(userData));
-                    dispatch({
-                        type: 'LOGIN',
-                        payload: {
-                            role: userData.role,
-                            userData: userData
-                        },
-                    });
-                }
-            });
+            const userDoc = await userRef.get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                AsyncStorage.setItem('role', userData.role);
+                AsyncStorage.setItem('userData', JSON.stringify(userData));
+                dispatch({
+                    type: 'LOGIN',
+                    payload: {
+                        userData: {
+                            ...userData,
+                            userId: user.uid // Menyertakan userId ke dalam userData
+                        }
+                    },
+                });
+            } else {
+                console.log("User document does not exist");
+                // Lakukan tindakan yang sesuai jika dokumen pengguna tidak ada
+            }
         } catch (error) {
             Alert.alert('Invalid credentials or error occurred.');
         }
     };
 };
+
 
 export const SignUp = (username, email, password, role) => {
     return async dispatch => {
@@ -85,38 +108,39 @@ export const Logout = () => {
     };
 };
 
-export const EditProfile = (userId, editedValue, selectedImage, dataValue) => {
+export const EditProfile = (editedValue, selectedImage, oldImageUrl) => {
     return async (dispatch) => {
         try {
-            if (selectedImage !== dataValue.imageUrl) {
-                const currentUser = auth().currentUser;
-                if (currentUser) {
-                    await currentUser.updateProfile({
-                        photoURL: selectedImage
-                    });
-                }
+            const { id, ...dataWithoutId } = editedValue;
+            await firestore().collection('users').doc(id).update(dataWithoutId);
 
-                if (dataValue.imageUrl) {
-                    const oldImageRef = storage().refFromURL(dataValue.imageUrl);
-                    await oldImageRef.delete();
-                }
-
+            if (selectedImage !== oldImageUrl) {
                 const currentDate = new Date();
                 const timestamp = currentDate.getTime();
-                const fileName = `${updatedData.username.replace(/\s/g, '')}_${timestamp}`;
+                const fileName = `${editedValue.username.replace(/\s/g, '')}_${timestamp}`;
                 const reference = storage().ref(`profileImages/${fileName}`);
                 await reference.putFile(selectedImage);
-                const imageUrl = await reference.getDownloadURL();
+                const imageUrlBaru = await reference.getDownloadURL();
 
-                await firestore().collection('users').doc(userId).update({ imageUrl: imageUrl });
+                console.log('data tua:', oldImageUrl)
+                if (oldImageUrl) {
+                    await storage().refFromURL(oldImageUrl).delete();
+                }
+
+                await firestore().collection('users').doc(editedValue.id).update({ imageUrl: imageUrlBaru });
+                console.log('URL gambar berhasil diperbarui');
             }
 
-            await firestore().collection('users').doc(userId).update(editedValue);
+            const updatedUserDoc = await firestore().collection('users').doc(id).get();
+            const updatedUserData = updatedUserDoc.data();
+
+            console.log('result redux editing :', updatedUserData)
 
             dispatch({
-                type: 'SAVE_PROFILE_CHANGES',
-                payload: { editedValue, imageUrl: selectedImage },
+                type: 'EDIT_PROFILE',
+                payload: { updatedUserData },
             });
+
         } catch (error) {
             console.error('Error saving profile changes: ', error);
             Alert.alert('Gagal menyimpan perubahan profil: ', error.message);
@@ -124,23 +148,41 @@ export const EditProfile = (userId, editedValue, selectedImage, dataValue) => {
     };
 };
 
-export const fetchUserData = (userId) => {
+export const deleteUser = (dataValue, password) => {
     return async (dispatch) => {
         try {
-            const userDoc = await firestore().collection('users').doc(userId).get();
+            // Mendapatkan email pengguna saat ini
+            const email = auth().currentUser.email;
 
-            if (userDoc.exists) {
-                const userData = userDoc.data();
-                dispatch({
-                    type: 'FETCH_USER_DATA',
-                    payload: userData,
-                });
-            } else {
-                console.log("User document doesn't exist");
+            // Membuat kredensial dengan email pengguna dan password yang dimasukkan
+            const credential = auth.EmailAuthProvider.credential(email, password);
+
+            // Reautentikasi pengguna dengan kredensial
+            await auth().currentUser.reauthenticateWithCredential(credential);
+
+            firestore().collection('users').doc(dataValue.userId).delete();
+            console.log('data user di firestore telah di delete')
+
+            console.log('data image jika ada akan di hapus')
+            if (dataValue.imageUrl) {
+                storage().refFromURL(dataValue.imageUrl).delete();
             }
+
+            await auth().currentUser.delete()
+            console.log('data user di authentication telah di delete')
+
+            await AsyncStorage.clear();
+
+            Alert.alert('Sukses', 'Pengguna berhasil dihapus');
+
+            dispatch({ type: 'DELETE_USER' });
         } catch (error) {
-            console.error('Error fetching user data: ', error);
-            Alert.alert('Gagal mengambil data pengguna: ', error.message);
+            console.log("Error deleting user:", error);
+            if (error.code === "auth/invalid-credential") {
+                Alert.alert("Password yang dimasukkan salah.");
+            } else {
+                console.log("Terjadi kesalahan saat menghapus pengguna.");
+            }
         }
     };
 };

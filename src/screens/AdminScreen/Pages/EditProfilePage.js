@@ -1,36 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, Image, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator } from 'react-native';
 import ButtonComponent from '../../../components/Button/ButtonComponent';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
 import { launchCamera } from 'react-native-image-picker';
 import { useDispatch } from 'react-redux';
-import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
-import storage from '@react-native-firebase/storage';
-import { updateUser } from '../../../redux/actions/UserAction';
+import { EditProfile, Init } from '../../../redux/actions/AuthAction';
 
 const EditProfilePage = ({ route }) => {
     const { dataValue } = route.params;
+    const [selectedImage, setSelectedImage] = useState(dataValue.imageUrl || null)
     const [editedValue, setEditedValue] = useState({
+        id: dataValue.userId,
         email: dataValue.email,
         username: dataValue.username,
         role: dataValue.role,
-        imageUrl: dataValue.imageUrl
     });
-    const [userId, setUserId] = useState(null);
     const [isLoading, setIsLoading] = useState(false); // State untuk menunjukkan status loading
 
-    console.log(dataValue.imageUrl)
-
-    useEffect(() => {
-        const fetchData = async () => {
-            const user = auth().currentUser;
-            if (user) {
-                setUserId(user.uid);
-            }
-        };
-        fetchData();
-    }, []);
+    console.log('id :', dataValue.userId)
+    console.log('Image :', selectedImage)
 
     const dispatch = useDispatch();
 
@@ -52,10 +40,7 @@ const EditProfilePage = ({ route }) => {
             console.log('Image picker error: ', response.error);
         } else {
             let imageUri = response.uri || response.assets?.[0]?.uri;
-            setEditedValue(prevState => ({
-                ...prevState,
-                imageUrl: imageUri // Memperbarui imageUrl di state userData
-            }));
+            setSelectedImage(imageUri);
         }
     };
 
@@ -68,21 +53,11 @@ const EditProfilePage = ({ route }) => {
 
     const handleSaveChanges = async () => {
         try {
-            if (!userId) {
-                console.error('UserId tidak tersedia');
-                return;
-            }
 
             setIsLoading(true); // Set isLoading menjadi true saat proses penyimpanan dimulai
 
-            // Tambahkan userId ke dalam data yang akan diperbarui
-            const updatedData = {
-                ...editedValue,
-                userId: userId,
-            };
-
             // Panggil aksi updateUser dengan data pengguna yang diperbarui, gambar yang dipilih, dan URL gambar lama
-            await dispatch(updateUser(updatedData, editedValue.imageUrl, dataValue.imageUrl));
+            await dispatch(EditProfile(editedValue, selectedImage, dataValue.imageUrl));
 
             setIsLoading(false); // Set isLoading menjadi false setelah penyimpanan selesai
 
@@ -101,8 +76,8 @@ const EditProfilePage = ({ route }) => {
             <View style={styles.container}>
                 <TouchableOpacity onPress={openCameraPicker}>
                     <View style={styles.imageContainer}>
-                        {editedValue.imageUrl ? (
-                            <Image source={{ uri: editedValue.imageUrl }} style={styles.image} />
+                        {selectedImage ? (
+                            <Image source={{ uri: selectedImage }} style={styles.image} />
                         ) : (
                             <View style={styles.imageIcon} >
                                 <Icon2 name="image" size={40} />

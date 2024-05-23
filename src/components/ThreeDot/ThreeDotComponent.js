@@ -5,14 +5,17 @@ import Icon2 from 'react-native-vector-icons/MaterialIcons'
 import { useNavigation } from '@react-navigation/native'
 import { useDispatch } from 'react-redux'
 import { deleteBook } from '../../redux/actions/BookAction'
+import { deleteUser } from '../../redux/actions/AuthAction'
+import ConfirmDeleteModalComponent from '../Modal/ConfirmDeleteModalComponent'
 
 const ThreeDotComponent = ({ dataValue, dataType, hideModal }) => {
     const dispatch = useDispatch();
     const [isPopoverVisible, setPopoverVisible] = useState(false);
     const navigation = useNavigation();
+    const [isModalVisible, setModalVisible] = useState(false);
 
     console.log('datatype', dataType)
-    console.log('data', dataValue)
+    console.log('data threee', dataValue)
     const handleDotsPress = () => {
         setPopoverVisible(!isPopoverVisible);
     };
@@ -29,17 +32,15 @@ const ThreeDotComponent = ({ dataValue, dataType, hideModal }) => {
         hideModal();
     };
 
-    const handleDeletePress = () => {
+    const handleDeletePress = async () => {
         // Panggil aksi deleteBook dengan id buku dan URL gambar
         if (dataType === 'book') {
             console.log("Deleting book:", dataValue.id);
             dispatch(deleteBook(dataValue.id, dataValue.imageUrl));
 
-        } else if (dataType === 'user') {
-            console.log("Deleting User:", dataValue.id);
-            dispatch(deleteUser(dataValue.id, dataValue.imageUrl));
+        } else if (dataType === 'profile') {
+            setModalVisible(true)
         }
-        hideModal();
     };
     return (
         <View>
@@ -57,15 +58,22 @@ const ThreeDotComponent = ({ dataValue, dataType, hideModal }) => {
                                 <Text style={styles.text}>Edit</Text>
                             </View>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={handleDeletePress}>
-                            <View style={styles.popoverOption}>
-                                <Icon2 name='delete' size={20} />
-                                <Text style={styles.text}>Delete</Text>
-                            </View>
-                        </TouchableOpacity>
+                        {dataType !== 'user' && (
+                            <TouchableOpacity onPress={handleDeletePress}>
+                                <View style={styles.popoverOption}>
+                                    <Icon2 name='delete' size={20} />
+                                    <Text style={styles.text}>Delete</Text>
+                                </View>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
             </View>
+            <ConfirmDeleteModalComponent
+                visible={isModalVisible}
+                hideModal={() => setModalVisible(false)}
+                dataValue={dataValue}
+            />
         </View>
     )
 }
@@ -84,7 +92,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 8,
         paddingVertical: 8,
-        paddingHorizontal: 4,
+        paddingHorizontal: 8,
         shadowColor: 'tomato',
         shadowOffset: {
             width: 0,

@@ -7,12 +7,15 @@ import BookCardComponent from '../../../components/BookCard/BookCardComponent'
 import ModalComponent from '../../../components/Modal/ModalComponent';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchBooks } from '../../../redux/actions/BookAction';
+import { Init } from '../../../redux/actions/AuthAction';
+import auth from '@react-native-firebase/auth';
 
 const HomePage = ({ navigation }) => {
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const bookData = useSelector(state => state.book.bookItems);
     const categories = ['All', ...Array.from(new Set(bookData.map(book => book.category)))];
+    const user = auth().currentUser;
     const dispatch = useDispatch()
     const [refreshing, setRefreshing] = React.useState(false);
 
@@ -22,6 +25,10 @@ const HomePage = ({ navigation }) => {
 
     const onRefresh = React.useCallback(() => {
         setRefreshing(true); // Pastikan refreshing disetel ke true di sini
+        if (user) {
+            const userId = user.uid;
+            dispatch(Init(userId));
+        }
         dispatch(fetchBooks())
             .then(() => {
                 setTimeout(() => {
@@ -36,6 +43,7 @@ const HomePage = ({ navigation }) => {
     }, [dispatch]);
 
     const userData = useSelector(state => state.auth.userData);
+    console.log('Dataaa User:', userData)
     const [modalVisible, setModalVisible] = useState(false);
 
     const handleCategorySelect = (category) => {
@@ -43,7 +51,11 @@ const HomePage = ({ navigation }) => {
     };
 
     useEffect(() => {
-        dispatch(fetchBooks())
+        if (user) {
+            const userId = user.uid;
+            dispatch(Init(userId));
+            dispatch(fetchBooks())
+        }
     }, [dispatch])
 
     const onIcon1Press = () => {

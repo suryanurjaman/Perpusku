@@ -8,19 +8,12 @@ import AdminBottomTab from './AdminStack/AdminBottomTab'
 import UserBottomTab from './UserStack/UserBottomTab'
 
 const RootNavigation = () => {
-    const role = useSelector(state => state.auth.role);
-    console.log('role', role)
+    const role = useSelector(state => state.auth.userData?.role);
+    console.log('role nyahhh', role)
 
-    const dispatch = useDispatch();
-    const init = async () => {
-        await dispatch(Init());
-    };
-    useEffect(() => {
-        init();
-    }, []);
     return (
         <NavigationContainer>
-            {role === null ? (
+            {role === null || role === undefined ? (
                 <AuthStack />
             ) : (
                 <>

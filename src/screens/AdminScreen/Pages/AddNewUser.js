@@ -13,8 +13,8 @@ const AddNewUser = () => {
     const [open, setOpen] = useState(false);
     const [category, setCategory] = useState('');
     const [items, setItems] = useState([
-        { label: 'Admin', value: 'admin' },
-        { label: 'User', value: 'user' },
+        { label: 'Admin', value: 'Admin' },
+        { label: 'User', value: 'User' },
     ]);
     console.log(category)
     const [userData, setUserData] = useState({

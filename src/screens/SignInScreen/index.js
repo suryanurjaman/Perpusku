@@ -6,19 +6,19 @@ import LogoComponent from '../../components/Logo/LogoComponent'
 import SignUpBtn from '../../components/Button/SignUpBtnComponent'
 import { handleGoTo } from '../../utils'
 import TextInputComponent from '../../components/TextInput/TextInputComponent'
-import { Login } from '../../redux/actions/AuthAction'
+import { Init, Login } from '../../redux/actions/AuthAction'
 import { useDispatch } from 'react-redux'
 
 const SignIn = ({ navigation }) => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const dispatch = useDispatch()
-    const submit = () => {
+    const submit = async () => {
         if (email.trim() === '' || password.trim() === '') {
             // Menampilkan pesan kesalahan jika email atau password kosong
             Alert.alert('Error', 'Please fill in both email and password.');
         } else {
-            dispatch(Login(email, password));
+            await dispatch(Login(email, password));
         }
     }
     return (

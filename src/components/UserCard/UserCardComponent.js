@@ -6,45 +6,57 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchUsers } from '../../redux/actions/UserAction';
 import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
 
-const UserCardComponent = () => {
+const UserCardComponent = (props) => {
     const users = useSelector(state => state.user.users);
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
-
-    const showModal = (user) => {
-        setSelectedUser(user);
+    const showModal = (userData) => {
+        setSelectedUser(userData);
         setModalVisible(true);
     };
 
     return (
         <View>
-
-            {users.map((userData) => (
-                <TouchableOpacity key={userData.id} onPress={() => showModal(userData)}>
-                    <View style={styles.container}>
-                        <View style={styles.cardContainer}>
-                            {userData.imageUrl ? (
-                                <View style={styles.image}>
-                                    <Image source={{ uri: userData.imageUrl }} style={styles.imageStyle} />
-                                </View>
-                            ) : (
-                                <View style={styles.image}>
-                                    <Icon name='image' size={34} />
-                                </View>
-                            )}
-                            <View style={styles.detailContainer}>
-                                <View style={styles.titleContainer}>
-                                    <Text style={styles.title}>{userData.username}</Text>
-                                </View>
-                                <View style={styles.qty}>
-                                    <Text style={styles.qtyText1}>{userData.role}</Text>
-                                    <Text style={styles.qtyText2}>Tap to see details</Text>
+            {props.refreshing ? (
+                Array.from(Array(users && users.length > 0 ? users.length : 5).keys()).map((_, index) => (
+                    <View key={index} style={styles.container}>
+                        <ShimmerPlaceholder
+                            key={index}
+                            style={[styles.shimmer]}
+                            duration={1000}
+                            shimmerColors={['#EDEDED', '#D9D9D9', '#EDEDED']}
+                            shimmerStyle={{ borderRadius: 10 }}
+                        />
+                    </View>
+                ))
+            ) : (
+                users.map((userData) => (
+                    <TouchableOpacity key={userData.id} onPress={() => showModal(userData)}>
+                        <View style={styles.container}>
+                            <View style={styles.cardContainer}>
+                                {userData.imageUrl ? (
+                                    <View style={styles.image}>
+                                        <Image source={{ uri: userData.imageUrl }} style={styles.imageStyle} />
+                                    </View>
+                                ) : (
+                                    <View style={styles.image}>
+                                        <Icon name='image' size={34} />
+                                    </View>
+                                )}
+                                <View style={styles.detailContainer}>
+                                    <View style={styles.titleContainer}>
+                                        <Text style={styles.title}>{userData.username}</Text>
+                                    </View>
+                                    <View style={styles.qty}>
+                                        <Text style={styles.qtyText1}>{userData.role}</Text>
+                                        <Text style={styles.qtyText2}>Tap to see details</Text>
+                                    </View>
                                 </View>
                             </View>
                         </View>
-                    </View>
-                </TouchableOpacity>
-            ))}
+                    </TouchableOpacity>
+                ))
+            )}
 
 
             {selectedUser && (
@@ -91,7 +103,7 @@ const styles = StyleSheet.create({
     },
     detailContainer: {
         flex: 1,
-        marginLeft: 16
+        marginLeft: 16,
     },
     titleContainer: {
         flexDirection: 'row',
@@ -101,7 +113,8 @@ const styles = StyleSheet.create({
     title: {
         fontWeight: '600',
         fontSize: 16,
-        color: 'black'
+        color: 'black',
+        marginBottom: 8
     },
     qty: {
         flexDirection: 'row',
