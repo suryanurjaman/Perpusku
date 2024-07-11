@@ -2,10 +2,11 @@ import { StyleSheet } from 'react-native'
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native'
-import AdminHomeIcon from '../../components/AdminHomeIcon/AdminHomeIcon'
-import AdminAddUserIcon from '../../components/AdminAddUserIcon/AdminAddUserIcon'
 import AdminHomeStack from './AdminHomeStack'
 import AdminAddUserStack from './AdminAddUserStack'
+import AdminBorrowBookStack from './AdminBorrowBookStack'
+import AdminIcon from '../../components/AdminIcons/AdminIcons'
+
 
 const Tab = createBottomTabNavigator()
 
@@ -39,7 +40,7 @@ const AdminBottomTab = () => {
             <Tab.Screen name='HomeStack' component={AdminHomeStack} options={({ route }) => ({
                 tabBarIcon: ({ focused }) => {
                     return (
-                        <AdminHomeIcon focused={focused} />
+                        <AdminIcon isHome={true} focused={focused} />
                     )
                 },
                 tabBarHideOnKeyboard: true,
@@ -47,7 +48,15 @@ const AdminBottomTab = () => {
             <Tab.Screen name='AddUserStack' component={AdminAddUserStack} options={({ route }) => ({
                 tabBarIcon: ({ focused }) => {
                     return (
-                        <AdminAddUserIcon focused={focused} />
+                        <AdminIcon isUser={true} focused={focused} />
+                    )
+                },
+                tabBarHideOnKeyboard: true,
+            })} />
+            <Tab.Screen name='AdminBorrowBookStack' component={AdminBorrowBookStack} options={({ route }) => ({
+                tabBarIcon: ({ focused }) => {
+                    return (
+                        <AdminIcon isBook={true} focused={focused} />
                     )
                 },
                 tabBarHideOnKeyboard: true,

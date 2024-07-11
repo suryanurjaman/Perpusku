@@ -55,7 +55,6 @@ const AddUserPage = ({ navigation }) => {
         >
             <AdminHeader
                 tittle='Data User'
-                icon1='adduser'
                 size={24}
                 onIcon1Press={onIcon1Press}
             />

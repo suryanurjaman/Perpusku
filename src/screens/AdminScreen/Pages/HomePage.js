@@ -7,13 +7,15 @@ import BookCardComponent from '../../../components/BookCard/BookCardComponent'
 import ModalComponent from '../../../components/Modal/ModalComponent';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchBooks } from '../../../redux/actions/BookAction';
-import { Init } from '../../../redux/actions/AuthAction';
+import { fetchUser } from '../../../redux/actions/AuthAction';
 import auth from '@react-native-firebase/auth';
+import { fetchRequestBorrowData } from '../../../redux/actions/BorrowBookAction';
 
 const HomePage = ({ navigation }) => {
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const bookData = useSelector(state => state.book.bookItems);
+    const borow = useSelector(state => state.borrowBook.allBorrowedBook);
     const categories = ['All', ...Array.from(new Set(bookData.map(book => book.category)))];
     const user = auth().currentUser;
     const dispatch = useDispatch()
@@ -27,7 +29,7 @@ const HomePage = ({ navigation }) => {
         setRefreshing(true); // Pastikan refreshing disetel ke true di sini
         if (user) {
             const userId = user.uid;
-            dispatch(Init(userId));
+            dispatch(fetchUser(userId));
         }
         dispatch(fetchBooks())
             .then(() => {
@@ -53,8 +55,9 @@ const HomePage = ({ navigation }) => {
     useEffect(() => {
         if (user) {
             const userId = user.uid;
-            dispatch(Init(userId));
+            dispatch(fetchUser(userId));
             dispatch(fetchBooks())
+            dispatch(fetchRequestBorrowData())
         }
     }, [dispatch])
 

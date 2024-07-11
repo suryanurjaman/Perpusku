@@ -5,7 +5,29 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
 
-export const Init = (userId) => {
+
+export const autoLogin = () => {
+    return async dispatch => {
+        try {
+            const userData = await AsyncStorage.getItem('userData');
+
+            if (userData) {
+                const parsedUserData = JSON.parse(userData);
+
+                dispatch({
+                    type: 'LOGIN',
+                    payload: {
+                        userData: parsedUserData,
+                    },
+                });
+            }
+        } catch (error) {
+            console.error('Error auto logging in: ', error);
+        }
+    };
+};
+
+export const fetchUser = (userId) => {
     return async (dispatch) => {
         let unsubscribe;
         try {
@@ -18,6 +40,8 @@ export const Init = (userId) => {
                 .onSnapshot((snapshot) => {
                     if (snapshot) {
                         const userData = snapshot.data();
+
+
                         dispatch({
                             type: 'LOGIN',
                             payload: {
@@ -53,10 +77,12 @@ export const Login = (email, password) => {
             const userRef = firestore().collection('users').doc(user.uid);
 
             const userDoc = await userRef.get();
+
             if (userDoc.exists) {
                 const userData = userDoc.data();
-                AsyncStorage.setItem('role', userData.role);
-                AsyncStorage.setItem('userData', JSON.stringify(userData));
+
+                await AsyncStorage.setItem('userData', JSON.stringify(userData));
+
                 dispatch({
                     type: 'LOGIN',
                     payload: {
@@ -66,12 +92,32 @@ export const Login = (email, password) => {
                         }
                     },
                 });
+
             } else {
                 console.log("User document does not exist");
-                // Lakukan tindakan yang sesuai jika dokumen pengguna tidak ada
+                Alert.alert('User document does not exist.');
             }
         } catch (error) {
-            Alert.alert('Invalid credentials or error occurred.');
+            let errorMessage = 'An error occurred.';
+            switch (error.code) {
+                case 'auth/invalid-email':
+                    errorMessage = 'Invalid email address format.';
+                    break;
+                case 'auth/user-disabled':
+                    errorMessage = 'User account has been disabled.';
+                    break;
+                case 'auth/user-not-found':
+                    errorMessage = 'No user found with this email.';
+                    break;
+                case 'auth/wrong-password':
+                    errorMessage = 'Incorrect password.';
+                    break;
+                default:
+                    errorMessage = error.message;
+                    break;
+            }
+            Alert.alert(errorMessage);
+            console.error('Login error:', error);
         }
     };
 };
@@ -97,8 +143,8 @@ export const SignUp = (username, email, password, role) => {
 export const Logout = () => {
     return async dispatch => {
         try {
+            await AsyncStorage.removeItem('userData');
             await auth().signOut();
-            await AsyncStorage.clear();
             dispatch({
                 type: 'LOGOUT',
             });
@@ -171,7 +217,6 @@ export const deleteUser = (dataValue, password) => {
             await auth().currentUser.delete()
             console.log('data user di authentication telah di delete')
 
-            await AsyncStorage.clear();
 
             Alert.alert('Sukses', 'Pengguna berhasil dihapus');
 

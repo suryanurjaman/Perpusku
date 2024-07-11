@@ -4,8 +4,9 @@ import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
 import ModalComponent from '../Modal/ModalComponent';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchBooks } from '../../redux/actions/BookAction';
+import ModalComponentUser from '../Modal/ModalComponentUser';
 
-const BookCardComponent = (props) => {
+const BookCardComponentUser = (props) => {
     const dispatch = useDispatch();
     const book = useSelector(state => state.book.bookItems);
     const [modalVisible, setModalVisible] = useState(false);
@@ -78,7 +79,7 @@ const BookCardComponent = (props) => {
                 ))
             )}
             {selectedBook && (
-                <ModalComponent
+                <ModalComponentUser
                     dataValue={selectedBook}
                     modalVisible={modalVisible}
                     hideModal={() => setModalVisible(false)}
@@ -157,4 +158,4 @@ const styles = StyleSheet.create({
     }
 });
 
-export default BookCardComponent;
+export default BookCardComponentUser;

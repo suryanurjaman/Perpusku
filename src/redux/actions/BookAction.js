@@ -43,6 +43,21 @@ export const deleteBook = (bookId, imageUrl) => {
     };
 };
 
+// Fungsi untuk memformat tanggal dan waktu
+const formatTimestamp = (timestamp) => {
+    const options = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        timeZoneName: 'short',
+        timeZone: 'Asia/Jakarta' // Atur zona waktu ke Indonesia
+    };
+    return new Intl.DateTimeFormat('id-ID', options).format(timestamp); // Gunakan pengaturan lokal Indonesia
+};
+
 export const fetchBooks = () => {
     return async (dispatch) => {
         try {
@@ -53,7 +68,7 @@ export const fetchBooks = () => {
                         const books = snapshot.docs.map(doc => ({
                             id: doc.id,
                             ...doc.data(),
-                            dateAdded: doc.data().dateAdded.toDate().getTime()
+                            dateAdded: formatTimestamp(doc.data().dateAdded.toDate())
                         }));
                         dispatch(fetchBooksSuccess(books));
                     }

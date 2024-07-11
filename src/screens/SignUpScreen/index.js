@@ -13,7 +13,7 @@ const SignUpScreen = ({ navigation }) => {
     const [email, setEmail] = useState('')
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
-    const [role, setRole] = useState('Admin')
+    const [role, setRole] = useState('User')
 
     const handleSignUp = async () => {
         try {

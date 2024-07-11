@@ -6,10 +6,10 @@ import Icon2 from 'react-native-vector-icons/FontAwesome';
 import ButtonComponent from '../Button/ButtonComponent';
 import { useDispatch, useSelector } from 'react-redux';
 import { Logout } from '../../redux/actions/AuthAction';
-import ThreeDotComponent from '../ThreeDot/ThreeDotComponent';
 import { requestBorrowBook } from '../../redux/actions/BorrowBookAction';
+import ThreeDotComponentUser from '../ThreeDot/ThreeDotComponentUser';
 
-const ModalComponent = ({ dataValue, modalVisible, hideModal, title, isProfile, isBook }) => {
+const ModalComponentUser = ({ dataValue, modalVisible, hideModal, title, isProfile, isBook }) => {
     const dispatch = useDispatch();
     const isUser = useSelector(state => state.auth.userData.role)
     const setLogout = () => {
@@ -42,11 +42,19 @@ const ModalComponent = ({ dataValue, modalVisible, hideModal, title, isProfile, 
                         <Text style={styles.detail}>
                             {title}
                         </Text>
-                        <ThreeDotComponent
-                            dataValue={dataValue}
-                            dataType={isProfile ? 'profile' : isBook ? 'book' : 'user'}
-                            hideModal={hideModal}
-                        />
+                        {isBook ? (
+                            <Icon2
+                                style={styles.closeButton}
+                                name='bookmark'
+                                size={24}
+                            />
+                        ) : (
+                            <ThreeDotComponentUser
+                                dataValue={dataValue}
+                                dataType={isProfile ? 'profile' : 'user'}
+                                hideModal={hideModal}
+                            />
+                        )}
                     </View>
                     <View style={styles.imageContainer}>
                         {isBook ? (
@@ -109,7 +117,7 @@ const ModalComponent = ({ dataValue, modalVisible, hideModal, title, isProfile, 
     );
 };
 
-export default ModalComponent;
+export default ModalComponentUser;
 
 const styles = StyleSheet.create({
     modalContainer: {

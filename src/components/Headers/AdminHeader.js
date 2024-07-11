@@ -10,11 +10,13 @@ const AdminHeader = ({ icon1, icon2, tittle, size, onIcon1Press, onIcon2Press })
                     <Text style={styles.text} >{tittle}</Text>
                 </View>
                 <View style={styles.iconContainer}>
-                    <TouchableOpacity onPress={onIcon1Press}>
-                        <View style={styles.image}>
-                            <Icon name={icon1} size={size} color="#747474" />
-                        </View>
-                    </TouchableOpacity>
+                    {icon1 &&
+                        <TouchableOpacity onPress={onIcon1Press}>
+                            <View style={styles.image}>
+                                <Icon name={icon1} size={size} color="#747474" />
+                            </View>
+                        </TouchableOpacity>
+                    }
                     {icon2 && (
                         <TouchableOpacity onPress={onIcon2Press}>
                             <View style={styles.image}>
