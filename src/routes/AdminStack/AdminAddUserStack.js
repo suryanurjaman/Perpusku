@@ -4,6 +4,7 @@ import AdminInputBookHeader from '../../components/Headers/AdminInputBookHeader'
 import AddUserPage from '../../screens/AdminScreen/Pages/AddUserPage'
 import AddNewUser from '../../screens/AdminScreen/Pages/AddNewUser'
 import EditUserPage from '../../screens/AdminScreen/Pages/EditUserPage'
+import AddSiswa from '../../screens/AdminScreen/Pages/AddSiswa'
 
 const Stack = createNativeStackNavigator()
 
@@ -28,6 +29,13 @@ const AdminAddUserStack = () => {
                 }}
                 name='EditUser'
                 component={EditUserPage}
+            />
+            <Stack.Screen
+                options={{
+                    header: (props) => <AdminInputBookHeader  {...props} title='Input data Siswa' navigateTo='HomePage' />
+                }}
+                name='AddSiswa'
+                component={AddSiswa}
             />
         </Stack.Navigator>
     )

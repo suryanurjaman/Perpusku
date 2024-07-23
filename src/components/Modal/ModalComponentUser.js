@@ -1,27 +1,86 @@
-// ModalComponent.js
-import React from 'react';
-import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/AntDesign';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
 import ButtonComponent from '../Button/ButtonComponent';
 import { useDispatch, useSelector } from 'react-redux';
-import { Logout } from '../../redux/actions/AuthAction';
-import { requestBorrowBook } from '../../redux/actions/BorrowBookAction';
+import { Logout, } from '../../redux/actions/AuthAction'; // Sesuaikan path dengan struktur proyek Anda
 import ThreeDotComponentUser from '../ThreeDot/ThreeDotComponentUser';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { requestBorrowBook } from '../../redux/actions/BorrowBookAction';
 
 const ModalComponentUser = ({ dataValue, modalVisible, hideModal, title, isProfile, isBook }) => {
     const dispatch = useDispatch();
-    const isUser = useSelector(state => state.auth.userData.role)
+    const isUser = useSelector(state => state.auth.userData.role);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [maxDate, setMaxDate] = useState(new Date().setDate(new Date().getDate() + 7)); // 7 days from today
+    const [borrowDuration, setBorrowDuration] = useState(0); // Durasi default
+    const [dateSelected, setDateSelected] = useState(false);
+
+    console.log('====================================');
+    console.log(borrowDuration);
+    console.log('====================================');
+
     const setLogout = () => {
         dispatch(Logout());
     };
-    const setBorrowBook = () => {
-        dispatch(requestBorrowBook(dataValue.id))
-    }
 
-    console.log('====================================');
-    console.log(dataValue);
-    console.log('====================================');
+    const setBorrowBook = () => {
+        // Validasi apakah tanggal sudah dipilih
+        if (!dateSelected) {
+            Alert.alert('Pilih Tanggal', 'Harap pilih tanggal sebelum meminjam buku. Klik tombol di sebelah kanan bawah untuk memilih tanggal');
+            return;
+        }
+
+        // Validasi apakah durasi peminjaman minimal 1 hari
+        if (borrowDuration <= 0) {
+            Alert.alert('Durasi Peminjaman Tidak Valid', 'Peminjaman harus dilakukan setidaknya selama satu hari.');
+            return;
+        }
+
+        // Validasi apakah hari ini adalah Sabtu atau Minggu
+        const today = new Date();
+        const day = today.getDay();
+        if (day === 0 || day === 6) { // 0 adalah Minggu dan 6 adalah Sabtu
+            Alert.alert("Hari Libur", "Anda tidak dapat mengajukan pinjaman buku pada hari Sabtu atau Minggu.");
+            return;
+        }
+
+        dispatch(requestBorrowBook(dataValue.id, borrowDuration));
+    };
+
+    const handleDateConfirm = (event, date) => {
+        setShowDatePicker(false);
+        if (date) {
+            const day = date.getDay();
+            if (day === 0 || day === 6) { // 0 adalah Minggu dan 6 adalah Sabtu
+                Alert.alert("Tanggal tidak valid", "Pengembalian tidak bisa dilakukan pada hari Sabtu atau Minggu. Silakan pilih tanggal lain.");
+                return;
+            }
+
+            setSelectedDate(date);
+            setDateSelected(true);
+
+
+            // Hitung durasi peminjaman dalam hari
+            const today = new Date();
+            const diffTime = Math.abs(date - today);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            setBorrowDuration(diffDays);
+        }
+    };
+
+    const openDatePicker = () => {
+        setShowDatePicker(true);
+    };
+
+    useEffect(() => {
+        // Set nilai default untuk borrowDuration ketika modal ditampilkan kembali
+        setBorrowDuration(0);
+        setDateSelected(false); // Atau nilai default yang sesuai dengan logika aplikasi Anda
+    }, [modalVisible]);
+
     return (
         <Modal
             animationType="slide"
@@ -74,7 +133,7 @@ const ModalComponentUser = ({ dataValue, modalVisible, hideModal, title, isProfi
                         )}
                         <Text style={styles.modalTitle}>{dataValue.title || dataValue.username || dataValue.name}</Text>
                         <Text style={styles.author}>{isBook ? `Penulis: ${dataValue.author}` : dataValue.role}</Text>
-                        {isBook && <Text style={styles.stock}>{isBook ? `Stock: ${dataValue.stock}` : ''}</Text>}
+                        {isBook && <Text style={styles.stock}>{`Stock: ${dataValue.stock}`}</Text>}
                     </View>
                     <View style={styles.HeadContent}>
                         <Text style={styles.about}>{isBook ? 'About the Book' : 'Email'}</Text>
@@ -100,6 +159,13 @@ const ModalComponentUser = ({ dataValue, modalVisible, hideModal, title, isProfi
                         )}
                     </View>
 
+                    {isProfile && dataValue.nip && (
+                        <>
+                            <Text style={styles.about}>NIS</Text>
+                            <Text style={styles.nip}>{`${dataValue.nip}`}</Text>
+                        </>
+                    )}
+
                     {isProfile && (
                         <View style={styles.footContainer}>
                             <ButtonComponent onPress={setLogout} styleText={styles.buttonText} style={styles.button} title='Log out' />
@@ -107,8 +173,29 @@ const ModalComponentUser = ({ dataValue, modalVisible, hideModal, title, isProfi
                     )}
 
                     {isUser === 'User' && !isProfile && (
-                        <View style={styles.footContainer}>
-                            <ButtonComponent onPress={setBorrowBook} styleText={styles.buttonText} style={styles.button} title='Pinjam Buku' />
+                        <View style={styles.footContainerBorrow}>
+                            <View style={styles.buttonWrapper}>
+                                {borrowDuration > 0 ? (
+                                    <TouchableOpacity onPress={setBorrowBook} style={styles.btnContaniner}>
+                                        <Text style={styles.btnText}>{`Pinjam untuk ${borrowDuration} hari`}</Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <ButtonComponent onPress={setBorrowBook} styleText={styles.buttonText} style={styles.buttonBorrow} title='Pinjam Buku' />
+                                )}
+                                <TouchableOpacity onPress={openDatePicker} style={styles.datePickerButton}>
+                                    <Icon name="calendar" style={styles.datePickerIcon} />
+                                </TouchableOpacity>
+                            </View>
+                            {showDatePicker && (
+                                <DateTimePicker
+                                    value={selectedDate}
+                                    mode="date"
+                                    display="default"
+                                    onChange={handleDateConfirm}
+                                    minimumDate={new Date().setDate(new Date().getDate() + 1)} // Tanggal besok
+                                    maximumDate={maxDate}
+                                />
+                            )}
                         </View>
                     )}
                 </View>
@@ -196,11 +283,48 @@ const styles = StyleSheet.create({
         marginBottom: 20
     },
     footContainer: {
-        marginTop: 20,
-        justifyContent: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
+        marginTop: 20
+    },
+    footContainerBorrow: {
+        marginTop: 20,
+    },
+    buttonWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     buttonText: {
         paddingVertical: 16,
-    }
+    },
+    buttonBorrow: {
+        flex: 1, // Membuat tombol Pinjam Buku fleksibel
+    },
+    datePickerButton: {
+        marginLeft: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        borderRadius: 5,
+        backgroundColor: '#ddd',
+    },
+    datePickerIcon: {
+        fontSize: 24,
+        color: 'black',
+    },
+    btnContaniner: {
+        flex: 1,
+        borderRadius: 10,
+        backgroundColor: '#747474',
+        width: '100%'
+    },
+    btnText: {
+        color: 'white',
+        textAlign: 'center',
+        fontSize: 18,
+        paddingVertical: 16,
+    },
 });

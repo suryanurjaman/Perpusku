@@ -94,36 +94,24 @@ export const Login = (email, password) => {
                 });
 
             } else {
+                // Handle case when user document does not exist
                 console.log("User document does not exist");
-                Alert.alert('User document does not exist.');
+                Alert.alert('Error Login', 'Email atau password salah atau akun tidak ditemukan.');
             }
         } catch (error) {
-            let errorMessage = 'An error occurred.';
-            switch (error.code) {
-                case 'auth/invalid-email':
-                    errorMessage = 'Invalid email address format.';
-                    break;
-                case 'auth/user-disabled':
-                    errorMessage = 'User account has been disabled.';
-                    break;
-                case 'auth/user-not-found':
-                    errorMessage = 'No user found with this email.';
-                    break;
-                case 'auth/wrong-password':
-                    errorMessage = 'Incorrect password.';
-                    break;
-                default:
-                    errorMessage = error.message;
-                    break;
+            if (error.code === 'auth/invalid-credential') {
+                console.log("User not found:", error.message);
+                Alert.alert('Error Login', 'Akun tidak terdaftar.');
+            } else {
+                console.log("Terjadi kesalahan saat login:", error.message);
+                Alert.alert('Error Login', 'Email atau password salah. Silakan coba lagi.');
             }
-            Alert.alert(errorMessage);
-            console.error('Login error:', error);
         }
     };
 };
 
 
-export const SignUp = (username, email, password, role) => {
+export const SignUp = (username, email, password, role, nip) => {
     return async dispatch => {
         try {
             const response = await auth().createUserWithEmailAndPassword(email, password);
@@ -131,11 +119,12 @@ export const SignUp = (username, email, password, role) => {
             await firestore().collection('users').doc(user.uid).set({
                 username: username,
                 email: email,
-                role: role
+                role: role,
+                nip: nip // Menyimpan NIP ke Firestore
             });
         } catch (error) {
             console.error('Error signing up: ', error);
-            Alert.alert('Error signing up: ', error.message);
+            Alert.alert('Error Sign Up', 'Pastikan data telah terisi dengan benar dengan benar');
         }
     };
 };
@@ -160,7 +149,7 @@ export const EditProfile = (editedValue, selectedImage, oldImageUrl) => {
             const { id, ...dataWithoutId } = editedValue;
             await firestore().collection('users').doc(id).update(dataWithoutId);
 
-            if (selectedImage !== oldImageUrl) {
+            if (selectedImage && selectedImage !== oldImageUrl) {
                 const currentDate = new Date();
                 const timestamp = currentDate.getTime();
                 const fileName = `${editedValue.username.replace(/\s/g, '')}_${timestamp}`;
@@ -168,19 +157,18 @@ export const EditProfile = (editedValue, selectedImage, oldImageUrl) => {
                 await reference.putFile(selectedImage);
                 const imageUrlBaru = await reference.getDownloadURL();
 
-                console.log('data tua:', oldImageUrl)
                 if (oldImageUrl) {
                     await storage().refFromURL(oldImageUrl).delete();
                 }
 
-                await firestore().collection('users').doc(editedValue.id).update({ imageUrl: imageUrlBaru });
+                await firestore().collection('users').doc(id).update({ imageUrl: imageUrlBaru });
                 console.log('URL gambar berhasil diperbarui');
+            } else {
+                console.log('Tidak ada gambar yang dipilih untuk diunggah.');
             }
 
             const updatedUserDoc = await firestore().collection('users').doc(id).get();
             const updatedUserData = updatedUserDoc.data();
-
-            console.log('result redux editing :', updatedUserData)
 
             dispatch({
                 type: 'EDIT_PROFILE',
@@ -194,9 +182,11 @@ export const EditProfile = (editedValue, selectedImage, oldImageUrl) => {
     };
 };
 
-export const deleteUser = (dataValue, password) => {
+
+export const deleteUser = (dataValue, password, navigation) => {
     return async (dispatch) => {
         try {
+            await AsyncStorage.removeItem('userData');
             // Mendapatkan email pengguna saat ini
             const email = auth().currentUser.email;
 
@@ -209,18 +199,18 @@ export const deleteUser = (dataValue, password) => {
             firestore().collection('users').doc(dataValue.userId).delete();
             console.log('data user di firestore telah di delete')
 
-            console.log('data image jika ada akan di hapus')
             if (dataValue.imageUrl) {
                 storage().refFromURL(dataValue.imageUrl).delete();
+                console.log('data image jika ada akan di hapus')
             }
 
             await auth().currentUser.delete()
             console.log('data user di authentication telah di delete')
 
-
             Alert.alert('Sukses', 'Pengguna berhasil dihapus');
 
             dispatch({ type: 'DELETE_USER' });
+            navigation.replace('Login');
         } catch (error) {
             console.log("Error deleting user:", error);
             if (error.code === "auth/invalid-credential") {

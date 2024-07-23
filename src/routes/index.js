@@ -7,8 +7,11 @@ import { Init, autoLogin } from '../redux/actions/AuthAction'
 import AdminBottomTab from './AdminStack/AdminBottomTab'
 import UserBottomTab from './UserStack/UserBottomTab'
 
+
 const RootNavigation = () => {
     const dispatch = useDispatch();
+    const isAuthenticated = useSelector(state => state.auth.isAuthenticated);
+    const userData = useSelector(state => state.auth.userData);
     const role = useSelector(state => state.auth.userData?.role);
     console.log('role nyahhh', role)
 
@@ -16,11 +19,13 @@ const RootNavigation = () => {
         dispatch(autoLogin());
     }, []);
 
+    const isUserLoggedIn = () => {
+        return isAuthenticated && userData && role;
+    };
+
     return (
         <NavigationContainer>
-            {role === null || role === undefined ? (
-                <AuthStack />
-            ) : (
+            {isUserLoggedIn() ? (
                 <>
                     {role === 'Admin' ? (
                         <AdminBottomTab />
@@ -28,6 +33,8 @@ const RootNavigation = () => {
                         <UserBottomTab />
                     )}
                 </>
+            ) : (
+                <AuthStack />
             )}
         </NavigationContainer>
 

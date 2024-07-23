@@ -22,6 +22,15 @@ const BorrowBookReducer = (state = initialState, action) => {
                 ...state,
                 borrowedBook: action.payload
             }
+        case EXTEND_BORROW_DURATION:
+            return {
+                ...state,
+                borrowedBooks: state.borrowedBooks.map((book) =>
+                    book.id === action.payload.borrowedBookId
+                        ? { ...book, returnDate: action.payload.newReturnDate }
+                        : book
+                ),
+            };
         default:
             return state
     }

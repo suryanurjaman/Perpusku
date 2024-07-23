@@ -1,7 +1,69 @@
-import { BORROW_BOOK, FETCH_ALL_BORROW_BOOK, FETCH_BORROW_BOOK_BY_ID } from "./BorrowBookActionType";
+import { BORROW_BOOK, FETCH_ALL_BORROW_BOOK, FETCH_BORROW_BOOK_BY_ID, EXTEND_BORROW_DURATION } from "./BorrowBookActionType";
 import firestore from '@react-native-firebase/firestore'
 import auth from '@react-native-firebase/auth'
 import { Alert } from "react-native";
+
+export const extendBorrowDuration = (borrowedBookId, additionalDays) => {
+    return async (dispatch) => {
+        try {
+            const borrowedBookRef = firestore().collection('borrowed_books').doc(borrowedBookId);
+            const borrowedBookDoc = await borrowedBookRef.get();
+
+            if (!borrowedBookDoc.exists) {
+                throw new Error('Data peminjaman tidak ditemukan');
+            }
+
+            const borrowedBookData = borrowedBookDoc.data();
+
+            if (borrowedBookData.returned) {
+                throw new Error('Buku sudah dikembalikan, tidak bisa diperpanjang');
+            }
+
+            const currentReturnDate = new Date(borrowedBookData.returnDate);
+            const newReturnDate = new Date(currentReturnDate.getTime() + additionalDays * 24 * 60 * 60 * 1000);
+
+            // Menyesuaikan tanggal pengembalian agar tidak jatuh pada hari Sabtu atau Minggu
+            const adjustedReturnDate = adjustReturnDate(newReturnDate);
+
+            // Update borrowDuration di Firestore
+            await borrowedBookRef.update({
+                returnDate: adjustedReturnDate.toLocaleString('id-ID', {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                    timeZone: 'Asia/Jakarta'
+                }),
+                borrowDuration: borrowedBookData.borrowDuration + additionalDays
+            });
+
+            // Optional: Load updated data and dispatch action to update state
+            dispatch({
+                type: EXTEND_BORROW_DURATION,
+                payload: {
+                    borrowedBookId,
+                    newReturnDate: adjustedReturnDate.toLocaleString('id-ID', {
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                        timeZone: 'Asia/Jakarta'
+                    })
+                }
+            });
+
+            console.log('Perpanjangan masa peminjaman berhasil');
+        } catch (error) {
+            console.log('Error extending borrow duration:', error);
+            // Handle error message
+        }
+    };
+};
+
 
 export const borrowBook = (bookId, borrowDuration) => {
     return async (dispatch) => {
@@ -79,7 +141,7 @@ export const requestBorrowBook = (bookId, borrowDuration) => {
 
             if (!querySnapshot.empty) {
                 // Jika ada peminjaman sebelumnya dengan buku yang sama dan masih ongoing, beri alert
-                Alert.alert('Anda sudah meminjam buku ini sebelumnya dan peminjaman masih berlangsung');
+                Alert.alert('Peminjaman sedang berlangsung', 'Anda sudah meminjam buku ini sebelumnya dan peminjaman masih berlangsung');
                 return;
             }
 
@@ -111,7 +173,7 @@ export const requestBorrowBook = (bookId, borrowDuration) => {
                 await firestore().collection('borrowed_books').add({
                     userId: userId,
                     bookId: bookId,
-                    borrowDuration: 2,
+                    borrowDuration: borrowDuration,
                     approved: false,
                     ongoing: true
                 });
@@ -153,8 +215,7 @@ export const requestReturnBook = (borrowedBookId) => {
             const borrowedBookData = borrowedBookDoc.data();
 
             if (borrowedBookData.returned === false) {
-                Alert.alert('Pengembalian sudah diajukan sebelumnya');
-                return;
+                return 'alreadyRequested';
             }
 
             await borrowedBookRef.update({ returned: false });
@@ -165,7 +226,7 @@ export const requestReturnBook = (borrowedBookId) => {
     };
 };
 
-export const approveReturnRequest = (requestId) => {
+export const approveReturnRequest = (requestId, damageInfo, lossInfo) => {
     return async (dispatch) => {
         try {
             const requestRef = firestore().collection('borrowed_books').doc(requestId);
@@ -187,29 +248,20 @@ export const approveReturnRequest = (requestId) => {
             }
 
             // Mengubah tanggal pengembalian yang diharapkan ke dalam objek Date
-            // Format tanggal: "6/7/2024 14.17"
             const [datePart, timePart] = requestData.returnDate.split(' ');
             const [day, month, year] = datePart.split('/');
             const [hour, minute] = timePart.split('.');
 
-            // Buat objek Date dari bagian tanggal dan waktu
             const expectedReturnDate = new Date(year, month - 1, day, hour, minute);
 
-            // Pastikan expectedReturnDate valid
             if (isNaN(expectedReturnDate.getTime())) {
                 throw new Error('Format tanggal pengembalian tidak valid');
             }
 
-            // Mendapatkan tanggal sekarang
             const currentDate = new Date();
-
-            // Menghitung selisih hari terlambat
             const diffInDays = Math.floor((currentDate - expectedReturnDate) / (1000 * 60 * 60 * 24));
-
-            // Jika diffInDays negatif, artinya buku dikembalikan lebih awal atau tepat waktu, jadi denda 0
             const fineAmount = diffInDays > 0 ? diffInDays * 5000 : 0;
 
-            // Mengubah status menjadi disetujui dan menambahkan tanggal pengembalian aktual
             await requestRef.update({
                 fine: fineAmount,
                 actualReturnDate: currentDate.toLocaleString('id-ID', {
@@ -222,33 +274,66 @@ export const approveReturnRequest = (requestId) => {
                     timeZone: 'Asia/Jakarta'
                 }),
                 ongoing: false,
-                returned: true
+                returned: true,
+                damageInfo: damageInfo,
+                lossInfo: lossInfo
             });
 
-            // Mengembalikan stok buku dengan menambah 1
             const bookRef = firestore().collection('books').doc(requestData.bookId);
-            await firestore().runTransaction(async (transaction) => {
-                const bookDoc = await transaction.get(bookRef);
-                if (!bookDoc.exists) {
-                    throw new Error('Buku tidak ditemukan');
-                }
+            const bookDoc = await bookRef.get();
+            if (!bookDoc.exists) {
+                throw new Error('Buku tidak ditemukan');
+            }
+            const bookData = bookDoc.data();
 
-                const bookData = bookDoc.data();
-                const updatedStock = bookData.stock + 1;
+            // Dapatkan data pengguna
+            const userRef = firestore().collection('users').doc(requestData.userId);
+            const userDoc = await userRef.get();
+            if (!userDoc.exists) {
+                throw new Error('Pengguna tidak ditemukan');
+            }
+            const userData = userDoc.data();
+
+            // Memasukkan data ke dalam reportBorrowedBook
+            const reportRef = firestore().collection('reportBorrowedBook').doc();
+            await reportRef.set({
+                bookId: requestData.bookId,
+                userId: requestData.userId,
+                bookTitle: bookData.title, // Misalnya, ambil judul buku
+                userName: userData.username, // Misalnya, ambil nama pengguna
+                borrowedAt: requestData.borrowedAt,
+                returnDate: requestData.returnDate,
+                actualReturnDate: currentDate.toLocaleString('id-ID', {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                    timeZone: 'Asia/Jakarta'
+                }),
+                damageInfo: damageInfo,
+                lossInfo: lossInfo
+                // tambahkan informasi lain yang diperlukan dari borrowed_books
+            });
+
+            // Update stok buku
+            await firestore().runTransaction(async (transaction) => {
+                const updatedStock = lossInfo === 'Hilang' ? bookData.stock + 0 : bookData.stock + 1;
                 transaction.update(bookRef, { stock: updatedStock });
             });
 
             console.log('Pengembalian buku berhasil diproses');
-
-            // Optional: Load updated data and dispatch action to update state
-            // Example:
             dispatch(fetchBorrowedBookByUserLogin(requestData.userId));
         } catch (error) {
             console.log('Error approving return request:', error);
-            // Handle error message
         }
     };
 };
+
+
+
+
 
 
 
@@ -387,13 +472,27 @@ export const approveBorrowRequest = (requestId, borrowDuration) => {
             }
 
             const requestData = requestDoc.data();
-            if (requestData.aproved) {
+            if (requestData.approved) {
                 console.log('Peminjaman telah disetujui sebelumnya');
                 return;
             }
 
             const currentDate = new Date();
             const returnDate = new Date(currentDate.getTime() + borrowDuration * 24 * 60 * 60 * 1000); // Menambahkan jumlah hari ke tanggal sekarang
+
+            // Menyesuaikan tanggal pengembalian agar tidak jatuh pada hari Sabtu atau Minggu
+            const adjustedReturnDate = adjustReturnDate(returnDate);
+
+            // Menyiapkan pesan notifikasi jika ada penyesuaian
+            let notificationMessage = '';
+            if (adjustedReturnDate.getTime() !== returnDate.getTime()) {
+                const daysAdjusted = Math.ceil((adjustedReturnDate.getTime() - returnDate.getTime()) / (24 * 60 * 60 * 1000));
+                notificationMessage = `Jadwal pengembalian dimajukan ${daysAdjusted} hari karena hari Sabtu/Minggu.`;
+
+                // Update borrowDuration di Firestore
+                borrowDuration += daysAdjusted;
+            }
+
             const options = {
                 year: 'numeric',
                 month: 'numeric',
@@ -403,12 +502,23 @@ export const approveBorrowRequest = (requestId, borrowDuration) => {
                 hour12: false,
                 timeZone: 'Asia/Jakarta'
             };
-            const returnDateString = returnDate.toLocaleString('id-ID', options);
 
-            await requestRef.update({
+            const borrowedAtString = currentDate.toLocaleString('id-ID', options);
+            const returnDateString = adjustedReturnDate.toLocaleString('id-ID', options);
+
+            // Update data peminjaman, termasuk pesan notifikasi jika ada
+            const updateData = {
                 'approved': true,
-                'returnDate': returnDateString
-            });
+                'approveBorrowedAt': borrowedAtString,
+                'returnDate': returnDateString,
+                'borrowDuration': borrowDuration // Update borrowDuration di Firestore
+            };
+
+            if (notificationMessage) {
+                updateData.notificationMessage = notificationMessage;
+            }
+
+            await requestRef.update(updateData);
 
             console.log('Peminjaman berhasil disetujui dan tanggal pengembalian ditambahkan');
 
@@ -420,6 +530,17 @@ export const approveBorrowRequest = (requestId, borrowDuration) => {
             // Handle error message
         }
     };
+};
+
+// Fungsi untuk menyesuaikan tanggal pengembalian agar tidak jatuh pada weekend
+const adjustReturnDate = (date) => {
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 6) { // Sabtu
+        return new Date(date.getTime() + 2 * 24 * 60 * 60 * 1000); // Tambah 2 hari untuk pindahkan ke hari Senin
+    } else if (dayOfWeek === 0) { // Minggu
+        return new Date(date.getTime() + 1 * 24 * 60 * 60 * 1000); // Tambah 1 hari untuk pindahkan ke hari Senin
+    }
+    return date; // Jika bukan Sabtu atau Minggu, kembalikan tanggal asli
 };
 
 

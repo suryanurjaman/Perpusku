@@ -1,7 +1,32 @@
-import { ADD_USER, DELETE_USER, UPDATE_USER, SET_USERS } from './UserActionType';
+import { ADD_USER, DELETE_USER, UPDATE_USER, SET_USERS, ADD_SISWA } from './UserActionType';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import storage from '@react-native-firebase/storage';
+
+
+export const addSiswa = (siswaData) => {
+    return async (dispatch) => {
+        try {
+            const { nis, namaSiswa } = siswaData;
+
+            // Tambahkan data siswa ke koleksi 'siswa'
+            await firestore().collection('dataSiswa').add({
+                nis,
+                namaSiswa
+            });
+
+            // Dispatch action untuk menambahkan siswa
+            dispatch({
+                type: ADD_SISWA,
+                payload: siswaData,
+            });
+
+            console.log('Data siswa berhasil ditambahkan:', siswaData);
+        } catch (error) {
+            console.error('Gagal menambahkan data siswa:', error);
+        }
+    };
+};
 
 export const addUser = (userData) => {
     return async (dispatch) => {

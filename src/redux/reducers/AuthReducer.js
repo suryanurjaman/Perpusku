@@ -16,12 +16,7 @@ const AuthReducer = (state = initialState, action) => {
                 userData: action.payload.userData,
             };
         case 'LOGOUT':
-            return {
-                ...state,
-                role: null,
-                isAuthenticated: false,
-                userData: null,
-            };
+            return initialState;
         case 'EDIT_PROFILE':
             return {
                 ...state,

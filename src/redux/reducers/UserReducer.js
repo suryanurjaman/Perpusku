@@ -1,12 +1,18 @@
 // File: reducers/userReducer.js
-import { ADD_USER, DELETE_USER, UPDATE_USER, SET_USERS } from '../actions/UserActionType';
+import { ADD_USER, DELETE_USER, UPDATE_USER, SET_USERS, ADD_SISWA } from '../actions/UserActionType';
 
 const initialState = {
     users: [],
+    siswa: [],
 };
 
 const userReducer = (state = initialState, action) => {
     switch (action.type) {
+        case ADD_SISWA:
+            return {
+                ...state,
+                siswa: [...state.siswa, action.payload],
+            };
         case ADD_USER:
             return {
                 ...state,

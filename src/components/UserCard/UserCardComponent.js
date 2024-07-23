@@ -1,15 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import ModalComponent from '../Modal/ModalComponent';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchUsers } from '../../redux/actions/UserAction';
 import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
 
-const UserCardComponent = (props) => {
-    const users = useSelector(state => state.user.users);
+const UserCardComponent = ({ users, refreshing }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
+
     const showModal = (userData) => {
         setSelectedUser(userData);
         setModalVisible(true);
@@ -17,8 +15,8 @@ const UserCardComponent = (props) => {
 
     return (
         <View>
-            {props.refreshing ? (
-                Array.from(Array(users && users.length > 0 ? users.length : 5).keys()).map((_, index) => (
+            {refreshing ? (
+                Array.from(Array(users.length > 0 ? users.length : 5).keys()).map((_, index) => (
                     <View key={index} style={styles.container}>
                         <ShimmerPlaceholder
                             key={index}
@@ -57,8 +55,6 @@ const UserCardComponent = (props) => {
                     </TouchableOpacity>
                 ))
             )}
-
-
             {selectedUser && (
                 <ModalComponent
                     dataValue={selectedUser}
@@ -77,7 +73,7 @@ const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
         marginHorizontal: 40,
-        marginVertical: 8
+        marginVertical: 8,
     },
     cardContainer: {
         borderRadius: 10,
@@ -85,7 +81,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#D9D9D9',
         flexDirection: 'row',
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
     },
     image: {
         width: 56,
@@ -94,7 +90,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#747474',
         alignItems: 'center',
         justifyContent: 'center',
-        resizeMode: 'cover'
+        resizeMode: 'cover',
     },
     imageStyle: {
         width: '100%',
@@ -108,13 +104,13 @@ const styles = StyleSheet.create({
     titleContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
     },
     title: {
         fontWeight: '600',
         fontSize: 16,
         color: 'black',
-        marginBottom: 8
+        marginBottom: 8,
     },
     qty: {
         flexDirection: 'row',
@@ -122,16 +118,16 @@ const styles = StyleSheet.create({
         fontSize: 12,
     },
     qtyText1: {
-        color: '#747474'
+        color: '#747474',
     },
     qtyText2: {
         fontSize: 12,
         top: 8,
-        color: 'tomato'
+        color: 'tomato',
     },
     shimmer: {
         marginVertical: 8,
         width: '100%',
-        height: 80
-    }
+        height: 80,
+    },
 });

@@ -6,25 +6,39 @@ import { approveBorrowRequest, requestReturnBook } from '../../../redux/actions/
 
 const DetailBorrowBookPageUser = ({ route, navigation }) => {
     const { selectedItem } = route.params;
+    console.log('====================================');
+    console.log('data', selectedItem);
+    console.log('====================================');
     const dispatch = useDispatch()
-    console.log('====================================');
-    console.log('datatatatat :', selectedItem);
-    console.log('====================================');
 
     const handleApproveReturn = async () => {
         try {
-            await dispatch(requestReturnBook(selectedItem.id))
-            Alert.alert(
-                'Persetujuan Peminjaman',
-                'Peminjaman Berhasil Diajukan',
-                [
-                    {
-                        text: 'OK',
-                        onPress: () => navigation.goBack()
-                    }
-                ],
-                { cancelable: false }
-            );
+            const response = await dispatch(requestReturnBook(selectedItem.id));
+            if (response === 'alreadyRequested') {
+                Alert.alert(
+                    'Pengembalian sudah diajukan',
+                    'Pengembalian sudah diajukan sebelumnya',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => navigation.goBack()
+                        }
+                    ],
+                    { cancelable: false }
+                );
+            } else {
+                Alert.alert(
+                    'Persetujuan Peminjaman',
+                    'Peminjaman Berhasil Diajukan',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => navigation.goBack()
+                        }
+                    ],
+                    { cancelable: false }
+                );
+            }
         } catch (error) {
             console.log(error);
             Alert.alert('Terjadi kesalahan', 'Tidak dapat mengajukan pengembalian saat ini');
@@ -41,8 +55,7 @@ const DetailBorrowBookPageUser = ({ route, navigation }) => {
                             style={styles.image}
                             resizeMode='cover'
                         />
-                    )
-                    }
+                    )}
                 </View>
             </View>
             <View style={styles.contentContainer}>
@@ -68,7 +81,7 @@ const DetailBorrowBookPageUser = ({ route, navigation }) => {
                 <View>
                     <Text style={styles.text}>{selectedItem.returnDate}</Text>
                 </View>
-                {selectedItem.status && (
+                {selectedItem.status && selectedItem.ongoing && (
                     <View style={styles.buttonContainer}>
                         <ButtonComponent onPress={handleApproveReturn} styleText={styles.buttonText} title='Ajukan Pengembalian' />
                     </View>

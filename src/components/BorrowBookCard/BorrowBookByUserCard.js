@@ -1,29 +1,31 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
-import ModalComponent from '../Modal/ModalComponent';
 import { useNavigation } from '@react-navigation/native';
 import { fetchBorrowedBookByUserLogin } from '../../redux/actions/BorrowBookAction';
 import auth from '@react-native-firebase/auth';
 
-
-const BorrowBookByUserCard = (props) => {
+const BorrowBookByUserCard = ({ selectedCategory, refreshing, searchQuery }) => {
     const dispatch = useDispatch();
     const borrowedBooks = useSelector(state => state.borrowBook.borrowedBook);
-    const filteredBooks = props.selectedCategory === null ? borrowedBooks :
-        props.selectedCategory ? borrowedBooks.filter(book => book.ongoing) :
+    const filteredBooks = selectedCategory === null ? borrowedBooks :
+        selectedCategory ? borrowedBooks.filter(book => book.ongoing) :
             borrowedBooks.filter(book => !book.ongoing);
 
-    console.log('====================================');
-    console.log(borrowedBooks);
-    console.log('====================================');
-    const navigation = useNavigation()
+    const searchFilteredBooks = filteredBooks.filter(book => {
+        const titleLower = book.title.toLowerCase();
+        const queryLower = searchQuery.toLowerCase();
+        return titleLower.includes(queryLower);
+    });
+
+    const navigation = useNavigation();
+
     const handleGotoDetail = (item) => {
         navigation.navigate('DetailBorrowBookPageUser', { selectedItem: item });
     };
 
-    useEffect(() => {
+    React.useEffect(() => {
         const unsubscribe = auth().onAuthStateChanged(user => {
             if (user) {
                 const userId = user.uid; // Dapatkan userId dari objek user saat dia login
@@ -34,10 +36,11 @@ const BorrowBookByUserCard = (props) => {
 
         return unsubscribe; // Pastikan untuk membatalkan langganan saat komponen unmount
     }, [dispatch]);
+
     return (
         <View>
-            {props.refreshing ? (
-                Array.from(Array(users && users.length > 0 ? users.length : 5).keys()).map((_, index) => (
+            {!borrowedBooks ? (
+                Array.from(Array(5).keys()).map((_, index) => (
                     <View key={index} style={styles.container}>
                         <ShimmerPlaceholder
                             key={index}
@@ -49,7 +52,7 @@ const BorrowBookByUserCard = (props) => {
                     </View>
                 ))
             ) : (
-                filteredBooks.map((item) => (
+                searchFilteredBooks.map((item) => (
                     <TouchableOpacity key={item.id} onPress={() => handleGotoDetail(item)}>
                         <View style={styles.container}>
                             <View style={styles.cardContainer}>
@@ -90,16 +93,16 @@ const BorrowBookByUserCard = (props) => {
                 ))
             )}
         </View>
-    )
-}
+    );
+};
 
-export default BorrowBookByUserCard
+export default BorrowBookByUserCard;
 
 const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
         marginHorizontal: 40,
-        marginVertical: 8
+        marginVertical: 8,
     },
     cardContainer: {
         borderRadius: 10,
@@ -107,7 +110,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#D9D9D9',
         flexDirection: 'row',
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
     },
     image: {
         width: 92,
@@ -116,7 +119,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#747474',
         alignItems: 'center',
         justifyContent: 'center',
-        resizeMode: 'cover'
+        resizeMode: 'cover',
     },
     imageStyle: {
         width: '100%',
@@ -130,13 +133,13 @@ const styles = StyleSheet.create({
     titleContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
     },
     title: {
         fontWeight: '600',
         fontSize: 20,
         color: 'black',
-        marginBottom: 8
+        marginBottom: 8,
     },
     qty: {
         flexDirection: 'row',
@@ -145,16 +148,16 @@ const styles = StyleSheet.create({
     },
     qtyText1: {
         fontSize: 16,
-        color: '#747474'
+        color: '#747474',
     },
     qtyText2: {
         fontSize: 12,
         top: 8,
-        color: 'tomato'
+        color: 'tomato',
     },
     shimmer: {
         marginVertical: 8,
         width: '100%',
-        height: 80
-    }
-})
+        height: 80,
+    },
+});

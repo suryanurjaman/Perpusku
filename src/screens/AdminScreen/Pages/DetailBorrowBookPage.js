@@ -1,20 +1,22 @@
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React from 'react'
+import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
 import ButtonComponent from '../../../components/Button/ButtonComponent';
 import { useDispatch } from 'react-redux';
-import { approveBorrowRequest, approveReturnRequest } from '../../../redux/actions/BorrowBookAction';
+import { approveBorrowRequest, approveReturnRequest, extendBorrowDuration } from '../../../redux/actions/BorrowBookAction';
+
+import ExtendReturnModal from '../../../components/Modal/ExtendReturnModal';
+import ReturnConfirmationModal from '../../../components/Modal/ReturnConfirmationModal ';
+
 
 const DetailBorrowBookPage = ({ route, navigation }) => {
     const { selectedItem } = route.params;
-    const dispatch = useDispatch()
-    console.log('====================================');
-    console.log('datatatatat :', selectedItem);
-    console.log('====================================');
-
+    const dispatch = useDispatch();
+    const [modalVisible, setModalVisible] = useState(false);
+    const [extendModalVisible, setExtendModalVisible] = useState(false);
 
     const handleApproveBorrow = async () => {
         try {
-            await dispatch(approveBorrowRequest(selectedItem.id, selectedItem.request.borrowDuration))
+            await dispatch(approveBorrowRequest(selectedItem.id, selectedItem.request.borrowDuration));
             Alert.alert(
                 'Persetujuan Peminjaman',
                 'Peminjaman berhasil disetujui',
@@ -29,28 +31,48 @@ const DetailBorrowBookPage = ({ route, navigation }) => {
         } catch (error) {
             console.log(error);
         }
-    }
+    };
 
-    const handleApproveReturn = async () => {
-        try {
-            await dispatch(approveReturnRequest(selectedItem.id))
-            Alert.alert(
-                'Persetujuan Pengembalian',
-                'Pengembalian berhasil disetujui',
-                [
-                    {
-                        text: 'OK',
-                        onPress: () => navigation.goBack()
-                    }
-                ],
-                { cancelable: false }
-            );
-        } catch (error) {
-            console.log(error);
-        }
-    }
+    const handleApproveReturn = (damageInfo, lossInfo) => {
+        dispatch(approveReturnRequest(selectedItem.id, damageInfo, lossInfo))
+            .then(() => {
+                Alert.alert(
+                    'Persetujuan Pengembalian',
+                    'Pengembalian berhasil disetujui',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => navigation.goBack()
+                        }
+                    ],
+                    { cancelable: false }
+                );
+            })
+            .catch((error) => {
+                console.log(error);
+            });
+    };
 
-    // Fungsi untuk mendapatkan teks status berdasarkan kondisi selectedItem
+    const handleExtendReturnPeriod = (numberOfDays) => {
+        dispatch(extendBorrowDuration(selectedItem.id, numberOfDays))
+            .then(() => {
+                Alert.alert(
+                    'Perpanjangan Pengembalian',
+                    'Perpanjangan berhasil dilakukan',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => setExtendModalVisible(false)
+                        }
+                    ],
+                    { cancelable: false }
+                );
+            })
+            .catch((error) => {
+                console.log(error);
+            });
+    };
+
     const getStatusText = () => {
         if (!selectedItem.request.approved) {
             return 'Belum disetujui';
@@ -60,6 +82,7 @@ const DetailBorrowBookPage = ({ route, navigation }) => {
             return 'Peminjaman telah selesai';
         }
     };
+
     return (
         <ScrollView>
             <View style={styles.container}>
@@ -70,8 +93,7 @@ const DetailBorrowBookPage = ({ route, navigation }) => {
                             style={styles.image}
                             resizeMode='cover'
                         />
-                    )
-                    }
+                    )}
                 </View>
             </View>
             <View style={styles.contentContainer}>
@@ -102,15 +124,26 @@ const DetailBorrowBookPage = ({ route, navigation }) => {
                 )}
                 {selectedItem.request.returned === false && (
                     <View style={styles.buttonContainer}>
-                        <ButtonComponent onPress={handleApproveReturn} styleText={styles.buttonText} title='Setujui Pengembalian' />
+                        <ButtonComponent onPress={() => setModalVisible(true)} styleText={styles.buttonText} title='Setujui Pengembalian' />
+                        <ButtonComponent onPress={() => setExtendModalVisible(true)} styleText={styles.buttonText} title='Perpanjang Pengembalian' />
                     </View>
                 )}
             </View>
+            <ReturnConfirmationModal
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                onConfirm={handleApproveReturn}
+            />
+            <ExtendReturnModal
+                visible={extendModalVisible}
+                onClose={() => setExtendModalVisible(false)}
+                onExtend={handleExtendReturnPeriod}
+            />
         </ScrollView>
-    )
-}
+    );
+};
 
-export default DetailBorrowBookPage
+export default DetailBorrowBookPage;
 
 const styles = StyleSheet.create({
     container: {
@@ -162,4 +195,4 @@ const styles = StyleSheet.create({
         height: 220,
         borderRadius: 10,
     },
-})
+});

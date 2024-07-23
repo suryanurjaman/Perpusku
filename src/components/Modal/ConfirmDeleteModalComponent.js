@@ -3,14 +3,21 @@ import React, { useState } from 'react'
 import PasswordField from '../TextInput/PasswordInputComponent';
 import { useDispatch } from 'react-redux';
 import { deleteUser } from '../../redux/actions/AuthAction';
+import { useNavigation } from '@react-navigation/native';
 
 const ConfirmDeleteModalComponent = ({ visible, hideModal, dataValue }) => {
     console.log('confirm data value :', dataValue)
     const dispatch = useDispatch()
     const [password, setPassword] = useState('');
+    const navigation = useNavigation();
 
     const handleConfirmDelete = async () => {
-        await dispatch(deleteUser(dataValue, password))
+        try {
+            await dispatch(deleteUser(dataValue, password, navigation));
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            // Handle error if needed
+        }
     };
 
     return (

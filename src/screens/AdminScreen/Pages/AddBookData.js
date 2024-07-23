@@ -9,13 +9,14 @@ import { addBook } from '../../../redux/actions/BookAction'
 import { useDispatch } from 'react-redux'
 import storage from '@react-native-firebase/storage'
 import Icon from 'react-native-vector-icons/AntDesign'
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const AddBookData = () => {
     const dispatch = useDispatch();
     const [selectedImage, setSelectedImage] = useState(null);
     const [open, setOpen] = useState(false);
     const [category, setCategory] = useState(null);
-    const [addCategory, setAddCategory] = useState('')
+    const [addCategory, setAddCategory] = useState('');
     const [items, setItems] = useState([
         { label: 'Fiksi', value: 'Fiksi' },
         { label: 'Non-Fiksi', value: 'Non-fiksi' },
@@ -23,16 +24,15 @@ const AddBookData = () => {
         { label: 'Biografi', value: 'Biografi' },
         { label: 'Tambahkan', value: 'Tambahkan' },
     ]);
-
     const [bookData, setBookData] = useState({
         title: '',
         author: '',
         publisher: '',
         description: '',
         stock: '',
-    })
-
-    console.log(category)
+        publishYear: new Date(),
+    });
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const handleAddCategory = () => {
         if (addCategory.trim() !== '') {
@@ -46,7 +46,7 @@ const AddBookData = () => {
             setOpen(false);
             setAddCategory('');
         }
-    }
+    };
 
     const renderAddCategoryField = () => {
         return (
@@ -68,8 +68,22 @@ const AddBookData = () => {
         setBookData({ ...bookData, [key]: value });
     };
 
+    const handleDateChange = (event, selectedDate) => {
+        const currentDate = selectedDate || bookData.publishYear;
+        setShowDatePicker(false);
+        handleInputChange('publishYear', currentDate);
+    };
+
+    // Format publishYear untuk tampilan
+
+
     const handleAddBook = async () => {
         try {
+            // Format publishYear sebagai string YYYY-MM-DD
+            const formattedPublishYear = bookData.publishYear
+                ? `${bookData.publishYear.getFullYear()}-${('0' + (bookData.publishYear.getMonth() + 1)).slice(-2)}-${('0' + bookData.publishYear.getDate()).slice(-2)}`
+                : '';
+
             const validations = {
                 'Judul': bookData.title,
                 'Penulis': bookData.author,
@@ -77,7 +91,8 @@ const AddBookData = () => {
                 'Deskripsi': bookData.description,
                 'Stok': bookData.stock,
                 'Kategori': category,
-                'Image': selectedImage
+                'Image': selectedImage,
+                'Tahun Terbit': formattedPublishYear // Gunakan formattedPublishYear
             };
 
             for (const key in validations) {
@@ -105,7 +120,13 @@ const AddBookData = () => {
             const reference = storage().ref(`bookImages/${fileName}`);
             await reference.putFile(selectedImage);
             const imageUrl = await reference.getDownloadURL();
-            const bookWithImage = { ...bookData, imageUrl, category: category, dateAdded: currentDate }
+            const bookWithImage = {
+                ...bookData,
+                imageUrl,
+                category: category,
+                dateAdded: currentDate,
+                publishYear: formattedPublishYear // Simpan sebagai string YYYY-MM-DD
+            };
 
             await dispatch(addBook(bookWithImage));
             console.log('Upload data berhasil');
@@ -116,6 +137,7 @@ const AddBookData = () => {
                 publisher: '',
                 description: '',
                 stock: '',
+                publishYear: new Date(), // Reset ke Date object
             });
             setSelectedImage(null);
             setCategory(null);
@@ -128,10 +150,7 @@ const AddBookData = () => {
             // Menampilkan alert jika terjadi kesalahan
             Alert.alert('Error', 'Terjadi kesalahan saat mengunggah data. Silakan coba lagi.');
         }
-    }
-
-
-    const [newCategory, setNewCategory] = useState('');
+    };
 
 
     const openImagePicker = () => {
@@ -178,8 +197,7 @@ const AddBookData = () => {
                                 style={styles.image}
                                 resizeMode='cover'
                             />
-                        )
-                        }
+                        )}
                     </View>
                 </TouchableOpacity>
                 <View style={styles.inputContainer}>
@@ -227,6 +245,21 @@ const AddBookData = () => {
                         value={bookData.stock}
                         onChangeText={(value) => handleInputChange('stock', value)}
                     />
+                    <Text style={styles.textTitle}>Tahun Terbit</Text>
+                    <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+                        <TextInputComponent
+                            value={bookData.publishYear ? `${bookData.publishYear.getFullYear()}-${('0' + (bookData.publishYear.getMonth() + 1)).slice(-2)}-${('0' + bookData.publishYear.getDate()).slice(-2)}` : 'Pilih tanggal'}
+                            editable={false}
+                        />
+                    </TouchableOpacity>
+                    {showDatePicker && (
+                        <DateTimePicker
+                            mode='date'
+                            value={bookData.publishYear}
+                            onChange={handleDateChange}
+                            maximumDate={new Date()}
+                        />
+                    )}
                     <View style={styles.buttonContainer}>
                         <ButtonComponent onPress={handleAddBook} styleText={styles.buttonText} title='Input data' />
                     </View>

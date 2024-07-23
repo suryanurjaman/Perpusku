@@ -6,6 +6,7 @@ import AdminHomeStack from './AdminHomeStack'
 import AdminAddUserStack from './AdminAddUserStack'
 import AdminBorrowBookStack from './AdminBorrowBookStack'
 import AdminIcon from '../../components/AdminIcons/AdminIcons'
+import AdminReportStack from './AdminReportStack'
 
 
 const Tab = createBottomTabNavigator()
@@ -57,6 +58,14 @@ const AdminBottomTab = () => {
                 tabBarIcon: ({ focused }) => {
                     return (
                         <AdminIcon isBook={true} focused={focused} />
+                    )
+                },
+                tabBarHideOnKeyboard: true,
+            })} />
+            <Tab.Screen name='AdminBorrowReportStack' component={AdminReportStack} options={({ route }) => ({
+                tabBarIcon: ({ focused }) => {
+                    return (
+                        <AdminIcon isReport={true} focused={focused} />
                     )
                 },
                 tabBarHideOnKeyboard: true,
